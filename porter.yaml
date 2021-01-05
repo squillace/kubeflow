@@ -4,14 +4,14 @@
 # Uncomment out the sections below to take full advantage of what Porter can do!
 
 name: aks-kubeflow
-version: 0.1.0
+version: 0.2.0
 description: "A bundle that installs, tests, and uninstalls Kubeflow on AKS."
 # TODO: update the registry to your own, e.g. myregistry
 registry: ghcr.io/squillace
 
 # If you want to customize the Dockerfile in use, uncomment the line below and update the referenced file. 
 # See https://porter.sh/custom-dockerfile/
-#dockerfile: Dockerfile.tmpl
+dockerfile: Dockerfile.tmpl
 
 mixins:
   - exec
@@ -66,20 +66,59 @@ install:
         - "istio.aks.yaml"
       validate: true
       wait: true
-  - kfctl:
-      description: "Applying the kfctl configuration file."
-      arguments: 
-        - apply
+  - exec:
+      command: bash
+      description: "Moving into the deployment location...."
+      suppress-output: false
       flags:
-        V: ""
-        f: v1.2-deployment/kfctl_azure.v1.2.0.yaml      
+        c: "'cd {{bundle.parameters.KF_DIR}} && kfctl apply -V -f {{bundle.parameters.CONFIG_FILE}}'"
+
+
+  - exec:
+      command: zip
+      description: "Capturing the Kustomize state..." 
+      suppress-output: false
+      arguments:
+        - "/cnab/app/v1.2-deployment/kustomize.zip"
+        - "/cnab/app/v1.2-deployment/kustomize"
+      flags:
+        r: ""
+  - exec:
+      command: find
+      description: "testing the existence of the kustomize directory"
+      suppress-output: false
+      arguments:
+        - "/cnab/app/"
+        - "-type f"
+        - "-name kustomize.zip"
+  - exec:
+      command: zip
+      description: "Capturing the Kustomize state..." 
+      suppress-output: false
+      outputs:
+        - name: kustomize
+          path: /cnab/app/v1.2-deployment/kustomize.zip
+      arguments:
+        - "/cnab/app/v1.2-deployment/kustomize.zip"
+        - "/cnab/app/v1.2-deployment/kustomize"
+      flags:
+        r: ""
+
+
+        #  - kfctl:
+#      description: "Applying the kfctl configuration file."
+#      arguments: 
+#        - apply
+#      flags:
+#        V: ""
+#        f: "'{{bundle.parameters.context_directory}}/kfctl_azure.v1.2.0.yaml'"      
 
   - exec:
       command: bash
       description: "testing"
       suppress-output: false
       flags:
-        c: "'kubectl get po -A'"
+        c: "'ls ./{{bundle.parameters.KF_DIR}}/'"
 upgrade:
   - exec:
       description: "World 2.0"
@@ -88,11 +127,84 @@ upgrade:
         - upgrade
 
 uninstall:
-  - exec:
-      description: "Uninstall Hello World"
-      command: ./helpers.sh
+  - az:
+      description: "Logging into Azure..."  
       arguments:
-        - uninstall
+        - login
+      suppress-output: true
+      flags:
+        service-principal:
+        username: "'{{bundle.credentials.AZURE_CLIENT_ID}}'"
+        password: "'{{bundle.credentials.AZURE_SP_PASSWORD}}'"
+        tenant: "'{{bundle.credentials.TENANT_ID_OR_DNS}}'"
+        output: table
+  - az: 
+      description: "Setting the Azure subscription...."
+      suppress-output: true
+      arguments: 
+        - "account" 
+        - "set" 
+      flags:
+        subscription: "{{ bundle.credentials.AZURE_SUBSCRIPTION_ID}}"
+  - az:
+      description: "Getting cluster access...."
+      suppress-output: true
+      arguments: 
+        - aks
+        - get-credentials
+      flags: 
+        resource-group: "'{{bundle.parameters.AZURE_RESOURCE_GROUP}}'"
+        name: "'{{bundle.parameters.CLUSTER_NAME}}'"
+
+
+  - exec:
+      command: unzip
+      description: "Rehydrating the Kustomize state..." 
+      suppress-output: false
+      arguments:
+        - "{{bundle.parameters.KF_DIR}}/kustomize.zip"
+
+
+  - exec:
+      command: bash
+      description: "Deleting the KubeFlow deployment...."
+      suppress-output: false
+      flags:
+        c: "'cd {{bundle.parameters.KF_DIR}} && kfctl delete -f {{bundle.parameters.CONFIG_FILE}}'"
+
+  - kubernetes:
+      description: "Deleting the istio components..."
+      manifests:
+        - "istio.aks.yaml"
+      wait: true
+  - exec:
+      command: bash
+      description: "Deleting the istio-system namespace."
+      flags:
+          c: '"kubectl create ns istio-system --dry-run -o yaml | kubectl delete -f -"' 
+
+#  - exec:
+#      description: "Uninstall Istio operator control plane..."
+#      command: bash
+#      flags:
+#        c: "'kubectl delete istiooperator istio-control-plane -n istio-system'"  
+  - exec:
+      command: istioctl
+      description: "Initializing Istio...."
+      suppress-output: false
+      arguments:
+        - operator
+        - remove
+
+outputs:
+  - name: kustomize
+    description: "A zip file of the kustomize generated state; reused automatically for the Uninstall action."
+    type: file
+    applyTo:
+      - "install"
+    path: /cnab/app/v1.2-deployment/kustomize.zip
+
+
 
 # Below is an example of how to define credentials
 # See https://porter.sh/author-bundles/#credentials
@@ -122,4 +234,20 @@ parameters:
   - name: CLUSTER_NAME
     description: "The name of the AKS cluster."
     type: string
-
+  - name: KF_DIR
+    description: "The deployment folder used for kfctl."
+    type: string
+    default: v1.2-deployment  
+    env: KF_DIR
+  - name: CONFIG_FILE
+    description: "The deployment config file used for kfctl."
+    type: string
+    default: kfctl_azure.v1.2.0.yaml
+    env: CONFIG_FILE
+  - name: kustomize
+    type: file
+    path: /cnab/app/v1.2-deployment/kustomize.zip
+    applyTo:
+      - "uninstall"
+    source:
+      output: kustomize

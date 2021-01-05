@@ -1,11 +1,14 @@
 apiVersion: kfdef.apps.kubeflow.org/v1
 kind: KfDef
 metadata:
+  annotations:
+    kfctl.kubeflow.io/force-delete: "false"
+  clusterName: cncf
+  creationTimestamp: null
   name: kubeflowmanifests
   namespace: kubeflow
 spec:
   applications:
-  # It is expected to have Istio 1.6.x installed in istio-system namespace
   - kustomizeConfig:
       repoRef:
         name: manifests
@@ -65,3 +68,7 @@ spec:
   - name: manifests
     uri: https://github.com/kubeflow/manifests/archive/ebeb4c285a0cf49750c4f07015b58cc27ca4c3a1.tar.gz
   version: v1.2-branch
+status:
+  reposCache:
+  - localPath: '".cache/manifests/manifests-ebeb4c285a0cf49750c4f07015b58cc27ca4c3a1"'
+    name: manifests
