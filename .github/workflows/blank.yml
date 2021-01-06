@@ -34,12 +34,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_PASSWORD }}
-      - name: Retag bundle for ghcr.io
-        run: |
-
-          grep "tag:" ./porter.yaml
-          grep "version" ./porter.yaml
- 
- - name: Porter publish to ghcr.io
+      - name: Porter publish to ghcr.io
         run: |
           porter publish
