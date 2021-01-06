@@ -37,7 +37,6 @@ jobs:
       - name: Retag bundle for ghcr.io
         run: |
 
-#          sed -i.bu "s/squillace\//${{ github.repository_owner }}\//g" ./porter.yaml
           grep "tag:" ./porter.yaml
           grep "version" ./porter.yaml
  
