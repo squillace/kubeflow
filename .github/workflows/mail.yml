@@ -30,7 +30,7 @@ jobs:
         uses: getporter/gh-action@v0.1.1
       - name: Pull in porter mixins
         run: |
-          porter mixins install kfctl --url https://github.com/squillace/porter-kfctl/releases/download --version v0.1.0
+          porter mixins install kfctl --url https://github.com/squillace/porter-kfctl/releases/download --version v0.1.1
 
       - name: Login to GitHub Packages OCI Registry
         uses: docker/login-action@v1
