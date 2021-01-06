@@ -40,4 +40,4 @@ jobs:
           password: ${{ secrets.GHCR_PASSWORD }}
       - name: Porter publish to ghcr.io
         run: |
-          porter publish
+          porter publish --debug
