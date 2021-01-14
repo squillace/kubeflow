@@ -4,7 +4,7 @@
 # Uncomment out the sections below to take full advantage of what Porter can do!
 
 name: aks-kubeflow
-version: 0.3.0
+version: 0.3.1
 description: "A bundle that installs, tests, and uninstalls Kubeflow on AKS. It currently requires an Azure Service Principal with the following role scoped to the AKS service instance: az ad sp create-for-rbac -n \"kubeconfig-read\" --role \"Azure Kubernetes Service Cluster User Role\" --scopes <cluster resource id>"
 # TODO: update the registry to your own, e.g. myregistry
 registry: ghcr.io/squillace
