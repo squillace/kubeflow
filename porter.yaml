@@ -4,8 +4,8 @@
 # Uncomment out the sections below to take full advantage of what Porter can do!
 
 name: aks-kubeflow
-version: 0.2.1
-description: "A bundle that installs, tests, and uninstalls Kubeflow on AKS."
+version: 0.3.0
+description: "A bundle that installs, tests, and uninstalls Kubeflow on AKS. It currently requires an Azure Service Principal with the following role scoped to the AKS service instance: az ad sp create-for-rbac -n \"kubeconfig-read\" --role \"Azure Kubernetes Service Cluster User Role\" --scopes <cluster resource id>"
 # TODO: update the registry to your own, e.g. myregistry
 registry: ghcr.io/squillace
 
@@ -67,6 +67,15 @@ install:
       validate: true
       wait: true
 
+#  - exec:
+#      command: sed
+#      description: "Configuring the Kubeflow deployment with the cluster name..."
+#      suppress-output: true
+#      arguments:
+#        - "'s/  namespace: kubeflow/  namespace: {{bundle.parameters.KUBEFLOW_NAMESPACE}}/g'"
+#        - v1.2-deployment/kfctl_azure.v1.2.0.yaml
+#      flags:
+#        i: ""
   - exec:
       command: sed
       description: "Configuring the Kubeflow deployment with the cluster name..."
@@ -76,12 +85,14 @@ install:
         - v1.2-deployment/kfctl_azure.v1.2.0.yaml
       flags:
         i: ""
+
   - exec:
       command: bash
       description: "output"
       suppress-output: false
       flags:
         c: "'cat v1.2-deployment/kfctl_azure.v1.2.0.yaml'"
+
   - exec:
       command: bash
       description: "Deploying Kubeflow...."
@@ -90,23 +101,15 @@ install:
         c: "'cd {{bundle.parameters.KF_DIR}} && kfctl apply -V -f {{bundle.parameters.CONFIG_FILE}}'"
 
 
-  - exec:
-      command: zip
-      description: "Capturing the Kustomize state..." 
-      suppress-output: false
-      arguments:
-        - "/cnab/app/v1.2-deployment/kustomize.zip"
-        - "/cnab/app/v1.2-deployment/kustomize"
-      flags:
-        r: ""
-  - exec:
-      command: find
-      description: "testing the existence of the kustomize directory"
-      suppress-output: false
-      arguments:
-        - "/cnab/app/"
-        - "-type f"
-        - "-name kustomize.zip"
+
+#  - exec:
+#      command: find
+#      description: "testing the existence of the kustomize directory"
+#      suppress-output: false
+#      arguments:
+#        - "/cnab/app/"
+#        - "-type f"
+#        - "-name kustomize.zip"
   - exec:
       command: zip
       description: "Capturing the Kustomize state..." 
@@ -119,22 +122,6 @@ install:
         - "/cnab/app/v1.2-deployment/kustomize"
       flags:
         r: ""
-
-
-        #  - kfctl:
-#      description: "Applying the kfctl configuration file."
-#      arguments: 
-#        - apply
-#      flags:
-#        V: ""
-#        f: "'{{bundle.parameters.context_directory}}/kfctl_azure.v1.2.0.yaml'"      
-
-  - exec:
-      command: bash
-      description: "testing"
-      suppress-output: false
-      flags:
-        c: "'ls ./{{bundle.parameters.KF_DIR}}/'"
 upgrade:
   - exec:
       description: "World 2.0"
@@ -179,6 +166,16 @@ uninstall:
       suppress-output: false
       arguments:
         - "{{bundle.parameters.KF_DIR}}/kustomize.zip"
+
+#  - exec:
+#      command: sed
+#      description: "Configuring the Kubeflow deployment with the cluster name..."
+#      suppress-output: true
+#      arguments:
+#        - "'s/  namespace: kubeflow/  namespace: {{bundle.parameters.KUBEFLOW_NAMESPACE}}/g'"
+#        - v1.2-deployment/kfctl_azure.v1.2.0.yaml
+#      flags:
+#        i: ""
   - exec:
       command: sed
       description: "Configuring the Kubeflow deployment with the cluster name..."
@@ -274,3 +271,7 @@ parameters:
       - "uninstall"
     source:
       output: kustomize
+#  - name: KUBEFLOW_NAMESPACE
+#    description: "The namespace into which to deploy Kubeflow."
+#    default: kubeflow
+#    type: string
