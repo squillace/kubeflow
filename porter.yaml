@@ -265,6 +265,7 @@ parameters:
     default: kfctl_azure.v1.2.0.yaml
     env: CONFIG_FILE
   - name: kustomize
+    description: "This value is automatically pulled from the state of the bundle installation the uninstall operation is working against. You do not provide it yourself."
     type: file
     path: /cnab/app/v1.2-deployment/kustomize.zip
     applyTo:
